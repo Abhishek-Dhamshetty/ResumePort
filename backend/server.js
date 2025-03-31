@@ -11,7 +11,7 @@ const port = process.env.PORT || 9000;
 
 // ✅ CORS Configuration to Allow Credentials
 const corsOptions = {
-  origin: "https://resume-port-kappa.vercel.app", // ✅ Allow frontend origin
+  origin: "https://resume-port-ten.vercel.app/", // ✅ Allow frontend origin
   credentials: true, // ✅ Allow cookies/auth headers
   allowedHeaders: ["Content-Type", "Authorization"], // ✅ Ensure required headers are allowed
   methods: ["GET", "POST", "PUT", "DELETE"], // ✅ Allow necessary HTTP methods
