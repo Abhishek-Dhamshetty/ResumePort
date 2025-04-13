@@ -49,7 +49,7 @@ const Home = () => {
           {/* Existing Content (For Non-Signed-In Users) */}
           {/* Resume Section */}
       <div className="max-w-3xl p-8 bg-white shadow-xl rounded-lg mb-8 transform transition-all duration-500 hover:scale-105 ">
-        <h2 className="text-3xl font-bold text-blue-600 mb-4">🚀 Build a Powerful Resume</h2>
+        <h2 className="text-3xl font-bold text-blue-600 mb-4"> Build a Powerful Resume</h2>
         <p className="text-lg text-gray-700 leading-relaxed">
           A resume is your first impression to employers. A well-crafted resume can make you stand out, showcase your skills, experience, and achievements, and land you your dream job.
         </p>
@@ -59,7 +59,7 @@ const Home = () => {
           <li>Showcase your achievements and work experience effectively.</li>
         </ul>
         <Link to="/signin" className="mt-6 inline-block bg-blue-600 text-white px-6 py-3 rounded-md shadow-md hover:bg-blue-700 transition">
-          Get Started 🚀
+          Get Started 
         </Link>
       </div>
       {/* Portfolio Section */}
