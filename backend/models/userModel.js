@@ -1,11 +1,11 @@
-import mongoose from "mongoose";
+const mongoose = require("mongoose");
 
 const UserSchema = new mongoose.Schema(
   {
-    clerkId: {
+    googleId: {
       type: String,
       required: true,
-      unique: true, // Clerk's unique user ID
+      unique: true,
     },
     firstName: {
       type: String,
@@ -21,12 +21,16 @@ const UserSchema = new mongoose.Schema(
       unique: true,
     },
     profileImage: {
-      type: String, // Stores Clerk profile image URL
+      type: String,
     },
     role: {
       type: String,
-      enum: ["user", "admin"], // Define roles for authorization
+      enum: ["user", "admin"],
       default: "user",
+    },
+    authProvider: {
+      type: String,
+      default: "google",
     },
     createdAt: {
       type: Date,
@@ -37,4 +41,4 @@ const UserSchema = new mongoose.Schema(
 );
 
 const User = mongoose.model("User", UserSchema);
-export default User;
+module.exports = User;

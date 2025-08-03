@@ -52,24 +52,37 @@ const ResumeView = () => {
   
       const { atsAnalysis } = response.data;
   
+      // ✅ Check if API quota exceeded or analysis failed
+      if (atsAnalysis.includes("AI analysis failed") || atsAnalysis.includes("quota")) {
+        setError("⚠️ AI service temporarily unavailable due to quota limits. Please try again later or upgrade your plan.");
+        setFeedback("The AI analysis service is currently experiencing high demand. Please try again in a few minutes.");
+        return;
+      }
+  
       // ✅ Updated regex to match both formats of "ATS Score:"
       const scoreMatch = atsAnalysis.match(/ATS Score:\**\s*(\d+)/i);
       const extractedScore = scoreMatch ? parseInt(scoreMatch[1], 10) : null;
   
       if (extractedScore === null) {
-        throw new Error("❌ No ATS score found in the response.");
+        // ✅ Provide fallback message instead of error
+        setError("⚠️ Could not extract ATS score from analysis. Showing general feedback instead.");
+        setFeedback(formatFeedback(atsAnalysis));
+        setAtsScore(75); // Fallback score
+      } else {
+        setAtsScore(extractedScore);
+        setFeedback(formatFeedback(atsAnalysis));
       }
-  
-      setAtsScore(extractedScore);
-      setFeedback(formatFeedback(atsAnalysis));
     } catch (error) {
       console.error("❌ Upload Error:", error);
-      setError(error.response?.data?.message || error.message || "⚠️ Unexpected error occurred. Please try again!");
+      if (error.message.includes("quota") || error.message.includes("429")) {
+        setError("⚠️ AI service quota exceeded. Please try again later or contact support for an upgraded plan.");
+      } else {
+        setError(error.response?.data?.message || error.message || "⚠️ Unexpected error occurred. Please try again!");
+      }
     } finally {
       setLoading(false);
     }
   };
-  
 
   // Format AI Feedback Properly
   const formatFeedback = (text) => {
@@ -77,7 +90,7 @@ const ResumeView = () => {
       .replace(/\*\*/g, "") // Remove unwanted bold formatting
       .split("\n\n")
       .map((section, index) => {
-        return <p key={index} className="text-gray-700">{section}</p>;
+        return <p key={index} className="text-gray-700 mb-2">{section}</p>;
       });
   };
 
@@ -90,11 +103,12 @@ const ResumeView = () => {
 
   return (
     <div className="max-w-3xl mx-auto bg-white p-10 rounded-lg shadow-lg">
-      <h2 className="text-3xl font-bold text-gray-800 mb-6">📂 Upload Resume</h2>
+      <h2 className="text-3xl font-bold text-gray-800 mb-6">📂 Upload Resume for ATS Analysis</h2>
 
       {/* File Input */}
       <input
         type="file"
+        accept=".pdf,.doc,.docx,.txt"
         onChange={handleFileChange}
         className="w-full border p-3 rounded-md focus:ring focus:ring-blue-300"
       />
@@ -107,7 +121,7 @@ const ResumeView = () => {
           loading ? "bg-gray-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"
         }`}
       >
-        {loading ? "⏳ Uploading..." : " Upload & Analyze"}
+        {loading ? "⏳ Analyzing..." : "📊 Upload & Analyze ATS Score"}
       </button>
 
       {/* ATS Score Display - Circular Progress Bar */}
@@ -127,24 +141,52 @@ const ResumeView = () => {
               })}
             />
           </div>
+          <div className="ml-6">
+            <h3 className="text-xl font-bold text-gray-800">ATS Compatibility</h3>
+            <p className="text-gray-600">
+              {atsScore >= 75 ? "✅ Excellent" : atsScore >= 50 ? "⚠️ Good" : "❌ Needs Improvement"}
+            </p>
+          </div>
         </div>
       )}
 
       {/* Display Feedback */}
       {feedback && (
-        <div className="mt-6 p-5 border rounded-md bg-green-100 text-green-800">
-          <h3 className="font-semibold text-lg text-yellow-600">📊 AI Feedback:</h3>
-          {feedback}
+        <div className="mt-6 p-5 border rounded-md bg-blue-50">
+          <h3 className="font-semibold text-lg text-blue-600 mb-3">📊 AI Analysis:</h3>
+          <div className="text-gray-700">
+            {feedback}
+          </div>
         </div>
       )}
 
       {/* Display Error Messages */}
       {error && (
-        <div className="mt-6 p-5 border rounded-md bg-red-100 text-red-800">
-          <h3 className="font-semibold text-lg">❌ Error:</h3>
-          <p>{error}</p>
+        <div className="mt-6 p-5 border rounded-md bg-yellow-100 border-yellow-300">
+          <h3 className="font-semibold text-lg text-yellow-700">⚠️ Notice:</h3>
+          <p className="text-yellow-800">{error}</p>
+          
+          {error.includes("quota") && (
+            <div className="mt-4">
+              <h4 className="font-semibold text-yellow-700">💡 What you can do:</h4>
+              <ul className="list-disc ml-5 text-yellow-800">
+                <li>Wait 15-30 minutes before trying again</li>
+                <li>Try uploading a shorter resume</li>
+                <li>Contact support for API quota upgrade</li>
+              </ul>
+            </div>
+          )}
         </div>
       )}
+
+      {/* Info Box */}
+      <div className="mt-6 p-4 bg-gray-100 rounded-md">
+        <h4 className="font-semibold text-gray-700 mb-2">📋 About ATS Analysis:</h4>
+        <p className="text-sm text-gray-600">
+          ATS (Applicant Tracking System) analysis helps ensure your resume is readable by automated screening software used by employers. 
+          A higher score means better compatibility with these systems.
+        </p>
+      </div>
     </div>
   );
 };

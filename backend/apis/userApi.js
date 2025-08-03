@@ -1,26 +1,19 @@
 const express = require("express");
 const expressAsyncHandler = require("express-async-handler");
 const User = require("../models/userModel");
-const clerkAuthMiddleware = require("../middlewares/clerkAuth");
+const jwtAuthMiddleware = require("../middlewares/jwtAuth");
 
 const userApp = express.Router();
 
 // 📌 Get User Profile
 userApp.get(
   "/profile",
-  clerkAuthMiddleware,
+  jwtAuthMiddleware,
   expressAsyncHandler(async (req, res) => {
     try {
-      console.log("🔹 Fetching user profile for Clerk ID:", req.auth.userId);
-      const user = await User.findOne({ clerkId: req.auth.userId });
-
-      if (!user) {
-        console.log("❌ User not found in DB");
-        return res.status(404).json({ success: false, message: "User not found" });
-      }
-
-      console.log("✅ User profile fetched successfully:", user);
-      res.status(200).json({ success: true, user });
+      console.log("🔹 Fetching user profile for User ID:", req.user._id);
+      
+      res.status(200).json({ success: true, user: req.user });
     } catch (error) {
       console.error("❌ Error fetching user profile:", error);
       res.status(500).json({ success: false, message: "Error fetching user data", error });
@@ -28,36 +21,24 @@ userApp.get(
   })
 );
 
-// 📌 Create or Update User in DB (Runs on First Login)
-userApp.post(
-  "/login",
-  clerkAuthMiddleware,
+// 📌 Update User Profile
+userApp.put(
+  "/profile",
+  jwtAuthMiddleware,
   expressAsyncHandler(async (req, res) => {
     try {
-      console.log("🔹 Clerk Auth Data:", req.auth);
+      const { firstName, lastName, email } = req.body;
       
-      const { userId, firstName, lastName, email, imageUrl } = req.auth;
+      const updatedUser = await User.findByIdAndUpdate(
+        req.user._id,
+        { firstName, lastName, email },
+        { new: true }
+      );
 
-      if (!userId || !email) {
-        console.log("❌ Missing required fields!");
-        return res.status(400).json({ success: false, message: "Invalid authentication data" });
-      }
-
-      let user = await User.findOne({ clerkId: userId });
-
-      if (!user) {
-        console.log("🆕 Creating new user...");
-        user = new User({ clerkId: userId, firstName, lastName, email, profileImage: imageUrl });
-        await user.save();
-        console.log("✅ User saved in MongoDB:", user);
-      } else {
-        console.log("✅ User already exists:", user);
-      }
-
-      res.status(200).json({ success: true, message: "User authenticated", user });
+      res.status(200).json({ success: true, user: updatedUser });
     } catch (error) {
-      console.error("❌ Error in /login:", error);
-      res.status(500).json({ success: false, message: "Error processing request", error });
+      console.error("❌ Error updating user profile:", error);
+      res.status(500).json({ success: false, message: "Error updating user", error });
     }
   })
 );
@@ -65,16 +46,11 @@ userApp.post(
 // 📌 Delete User Account
 userApp.delete(
   "/",
-  clerkAuthMiddleware,
+  jwtAuthMiddleware,
   expressAsyncHandler(async (req, res) => {
     try {
-      console.log("🔹 Deleting user with Clerk ID:", req.auth.userId);
-      const user = await User.findOneAndDelete({ clerkId: req.auth.userId });
-
-      if (!user) {
-        console.log("❌ User not found for deletion");
-        return res.status(404).json({ success: false, message: "User not found" });
-      }
+      console.log("🔹 Deleting user with ID:", req.user._id);
+      await User.findByIdAndDelete(req.user._id);
 
       console.log("✅ User deleted successfully from MongoDB");
       res.status(200).json({ success: true, message: "User deleted successfully" });

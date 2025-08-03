@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 const ResumeSchema = new mongoose.Schema(
   {
     userId: {
-      type: String,
+      type: mongoose.Schema.Types.ObjectId,
       required: true,
       ref: "User", 
     },
@@ -76,7 +76,7 @@ const ResumeSchema = new mongoose.Schema(
       },
     ],
   },
-  { timestamps: true } // Automatically creates createdAt & updatedAt fields
+  { timestamps: true }
 );
 
 const Resume = mongoose.model("Resume", ResumeSchema);

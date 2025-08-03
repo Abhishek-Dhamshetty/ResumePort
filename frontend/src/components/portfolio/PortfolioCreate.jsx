@@ -45,7 +45,7 @@ const TestPortfolioAPI = () => {
 
   const handleTestAPI = async () => {
     try {
-      const response = await fetch("http://localhost:9000/portfolio-api/generate", {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/portfolio-api/generate`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

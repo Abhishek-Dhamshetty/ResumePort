@@ -1,13 +1,13 @@
 import React, { useState } from "react";
 import emailjs from "@emailjs/browser";
 import { Link } from "react-router-dom";
-import { useUser } from "@clerk/clerk-react"; // ✅ Import useUser to check authentication
+import { useAuth } from "../../contexts/AuthContext";
 
 const ContactUs = () => {
-  const { user } = useUser(); // ✅ Get user details correctly
+  const { user, isAuthenticated } = useAuth();
   const [formData, setFormData] = useState({
-    name: user?.fullName || "",  // ✅ Auto-fill name if user is logged in
-    email: user?.primaryEmailAddress?.emailAddress || "", // ✅ Auto-fill email
+    name: user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : "",
+    email: user?.email || "",
     message: "",
   });
 
@@ -25,18 +25,18 @@ const ContactUs = () => {
     
     try {
       await emailjs.send(
-        "service_z91jh6k", // Replace with your EmailJS Service ID
-        "template_wr9v235", // Replace with your EmailJS Template ID
+        "service_z91jh6k",
+        "template_wr9v235",
         {
           user_name: formData.name,
           user_email: formData.email,
           message: formData.message,
         },
-        "oZhA3P1T4lUTc9Uv0" // Replace with your EmailJS Public Key
+        "oZhA3P1T4lUTc9Uv0"
       );
 
       setSuccess("✅ Message sent successfully!");
-      setFormData({ ...formData, message: "" }); // ✅ Clear only the message field
+      setFormData({ ...formData, message: "" });
     } catch (error) {
       console.error("Email sending failed:", error);
       setSuccess("❌ Failed to send message. Please try again.");
@@ -46,24 +46,46 @@ const ContactUs = () => {
 
   return (
     <div className="max-w-lg mx-auto mt-12 p-8 bg-gray-900 text-white shadow-2xl rounded-lg animate-fade-in">
-      
       <h1 className="text-4xl font-extrabold text-center bg-gradient-to-r from-blue-400 to-green-300 text-transparent bg-clip-text">
         Contact Us
       </h1>
 
-      {/* If User is Not Logged In */}
-      {!user ? (
+      {!isAuthenticated ? (
         <div className="text-center mt-6">
           <p className="text-lg text-gray-300">Please log in to send us a message.</p>
           <Link
             to="/signin"
             className="mt-4 inline-block bg-blue-500 text-white px-5 py-2 rounded-lg shadow-md hover:bg-blue-600 transition-transform hover:scale-105"
           >
-            Login
+            Login with Google
           </Link>
         </div>
       ) : (
         <>
+          {/* ✅ Display User Profile Info */}
+          {user && (
+            <div className="flex items-center justify-center mt-6 mb-4">
+              {user.profileImage ? (
+                <img 
+                  src={user.profileImage} 
+                  alt="Profile" 
+                  className="w-16 h-16 rounded-full border-2 border-blue-400 mr-3"
+                  onError={(e) => {
+                    e.target.src = `https://ui-avatars.com/api/?name=${user.firstName}+${user.lastName}&background=0d8abc&color=fff`;
+                  }}
+                />
+              ) : (
+                <div className="w-16 h-16 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold text-xl mr-3">
+                  {user.firstName?.charAt(0)}{user.lastName?.charAt(0)}
+                </div>
+              )}
+              <div>
+                <p className="text-lg font-semibold">{user.firstName} {user.lastName}</p>
+                <p className="text-sm text-gray-300">{user.email}</p>
+              </div>
+            </div>
+          )}
+
           {success && (
             <p className={`mt-4 text-center font-semibold text-lg ${success.includes("✅") ? "text-green-400" : "text-red-400"} animate-fade-in`}>
               {success}

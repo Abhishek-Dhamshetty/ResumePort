@@ -1,7 +1,7 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import './index.css';
-import { createBrowserRouter, Navigate, RouterProvider } from 'react-router-dom';
+import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import RootLayout from './components/common/RootLayout.jsx';
 import Home from './components/common/Home.jsx';
 import Login from './components/common/Login.jsx'
@@ -16,6 +16,7 @@ import PortfolioCreate from './components/portfolio/PortfolioCreate.jsx'
 import PortfolioReview from './components/portfolio/PortfolioReview.jsx'
 import PortfolioUpload from './components/portfolio/PortfolioUpload.jsx'
 import PortfolioView from './components/portfolio/PortfolioView.jsx'
+
 const browserRouterObj = createBrowserRouter([
   {
     path: '/',

@@ -10,10 +10,14 @@ const { analyzeResume, generateResume, analyzeATScore, reviewResume } = require(
 
 const resumeApp = express.Router();
 
-// ✅ CORS Configuration (Allow multiple origins)
+// ✅ CORS Configuration for Production
 const corsOptions = {
-  origin: ["https://resume-port-kappa.vercel.app"],
+  origin: process.env.NODE_ENV === 'production'
+    ? ["https://resume-port-ten.vercel.app", "https://resumeport.onrender.com"]
+    : ["http://localhost:5173", "http://localhost:3000"],
   credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
 };
 resumeApp.use(cors(corsOptions));
 
@@ -22,7 +26,12 @@ resumeApp.use(express.json({ limit: "10mb" }));
 
 // 📌 Multer Storage Configuration (For File Uploads)
 const storage = multer.memoryStorage();
-const upload = multer({ storage: storage });
+const upload = multer({ 
+  storage: storage,
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB limit
+  }
+});
 
 /* ---------------------------------------------
 📌 Extract Text from File (PDF, DOCX, TXT)
@@ -90,7 +99,7 @@ resumeApp.post(
     try {
       console.log("🛠️ Generating Resume...");
       
-      const aiGeneratedResume = await generateResume(req.body); // Ensure this returns an object with 'text'
+      const aiGeneratedResume = await generateResume(req.body);
 
       if (!aiGeneratedResume || !aiGeneratedResume.text) {
         throw new Error("AI service failed to generate a resume. Please try again.");
