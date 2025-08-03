@@ -6,6 +6,7 @@ const UserSchema = new mongoose.Schema(
       type: String,
       required: true,
       unique: true,
+      index: true, // Explicit index for Google ID
     },
     firstName: {
       type: String,
@@ -19,6 +20,7 @@ const UserSchema = new mongoose.Schema(
       type: String,
       required: true,
       unique: true,
+      index: true, // Explicit index for email
     },
     profileImage: {
       type: String,
@@ -37,8 +39,15 @@ const UserSchema = new mongoose.Schema(
       default: Date.now,
     },
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+    collection: "users", // Explicit collection name
+  }
 );
+
+// Ensure indexes are created properly
+UserSchema.index({ googleId: 1 }, { unique: true });
+UserSchema.index({ email: 1 }, { unique: true });
 
 const User = mongoose.model("User", UserSchema);
 module.exports = User;

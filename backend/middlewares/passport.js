@@ -23,35 +23,57 @@ passport.use(new GoogleStrategy({
         name: profile.displayName
       });
       
-      let user = await User.findOne({ 
-        $or: [
-          { googleId: profile.id },
-          { email: profile.emails[0].value }
-        ]
-      });
-
-      if (user) {
-        if (!user.googleId) {
+      // Try to find existing user by Google ID first, then by email
+      let user = await User.findOne({ googleId: profile.id });
+      
+      if (!user) {
+        // Check if user exists with same email (from old Clerk data)
+        user = await User.findOne({ email: profile.emails[0].value });
+        
+        if (user) {
+          // Update existing user with Google ID
           user.googleId = profile.id;
           user.profileImage = profile.photos?.[0]?.value;
           await user.save();
+          console.log("✅ Updated existing user with Google ID:", user.email);
+        } else {
+          // Create new user
+          user = new User({
+            googleId: profile.id,
+            firstName: profile.name.givenName,
+            lastName: profile.name.familyName,
+            email: profile.emails[0].value,
+            profileImage: profile.photos?.[0]?.value,
+          });
+          await user.save();
+          console.log("✅ New user created:", user.email);
         }
-        console.log("✅ Existing user found:", user.email);
       } else {
-        user = new User({
-          googleId: profile.id,
-          firstName: profile.name.givenName,
-          lastName: profile.name.familyName,
-          email: profile.emails[0].value,
-          profileImage: profile.photos?.[0]?.value,
-        });
-        await user.save();
-        console.log("✅ New user created:", user.email);
+        console.log("✅ Existing user found:", user.email);
       }
 
       return cb(null, user);
     } catch (error) {
       console.error("❌ Error in Google Strategy:", error);
+      
+      // Handle duplicate key errors more gracefully
+      if (error.code === 11000) {
+        console.log("🔄 Duplicate key error, trying to find existing user...");
+        try {
+          const existingUser = await User.findOne({ 
+            $or: [
+              { googleId: profile.id },
+              { email: profile.emails[0].value }
+            ]
+          });
+          if (existingUser) {
+            return cb(null, existingUser);
+          }
+        } catch (findError) {
+          console.error("❌ Error finding existing user:", findError);
+        }
+      }
+      
       return cb(error, null);
     }
   }
