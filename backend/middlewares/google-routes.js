@@ -7,9 +7,23 @@ router.get('/auth/google',
   passport.authenticate('google', { scope: ['profile', 'email'] }));
 
 router.get('/auth/google/callback', 
-  passport.authenticate('google', { failureRedirect: '/login' }),
+  passport.authenticate('google', { 
+    failureRedirect: process.env.NODE_ENV === 'production' 
+      ? 'https://resume-port-ten.vercel.app/signin?error=auth_failed'
+      : 'http://localhost:5173/signin?error=auth_failed'
+  }),
   function(req, res) {
     try {
+      console.log("🔍 OAuth Callback - User:", req.user);
+      
+      if (!req.user) {
+        throw new Error("No user data received from Google");
+      }
+
+      if (!process.env.JWT_SECRET) {
+        throw new Error("JWT_SECRET not configured");
+      }
+
       // Generate JWT token with profile image
       const token = jwt.sign(
         { 

@@ -2,6 +2,12 @@ const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const User = require('../models/userModel');
 
+console.log("🔍 Initializing Passport with:", {
+  clientID: process.env.GOOGLE_CLIENT_ID ? "Set" : "Missing",
+  clientSecret: process.env.GOOGLE_CLIENT_SECRET ? "Set" : "Missing",
+  environment: process.env.NODE_ENV
+});
+
 passport.use(new GoogleStrategy({
     clientID: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
@@ -11,7 +17,11 @@ passport.use(new GoogleStrategy({
   },
   async function(accessToken, refreshToken, profile, cb) {
     try {
-      console.log("🔍 Google Profile received:", profile.id);
+      console.log("🔍 Google Profile received:", {
+        id: profile.id,
+        email: profile.emails?.[0]?.value,
+        name: profile.displayName
+      });
       
       let user = await User.findOne({ 
         $or: [
@@ -23,7 +33,7 @@ passport.use(new GoogleStrategy({
       if (user) {
         if (!user.googleId) {
           user.googleId = profile.id;
-          user.profileImage = profile.photos[0].value;
+          user.profileImage = profile.photos?.[0]?.value;
           await user.save();
         }
         console.log("✅ Existing user found:", user.email);
@@ -33,7 +43,7 @@ passport.use(new GoogleStrategy({
           firstName: profile.name.givenName,
           lastName: profile.name.familyName,
           email: profile.emails[0].value,
-          profileImage: profile.photos[0].value,
+          profileImage: profile.photos?.[0]?.value,
         });
         await user.save();
         console.log("✅ New user created:", user.email);

@@ -78,12 +78,20 @@ app.use("/user-api", userApp);
 app.use("/resume-api", resumeApp);
 app.use("/api", googleRoutes);
 
-// ✅ Error handling middleware
+// ✅ Enhanced Error handling middleware
 app.use((err, req, res, next) => {
-  console.error("Server Error:", err);
+  console.error("Server Error Details:", {
+    message: err.message,
+    stack: err.stack,
+    url: req.url,
+    method: req.method,
+    headers: req.headers,
+    body: req.body
+  });
+  
   res.status(500).json({ 
     message: "Internal server error", 
-    error: process.env.NODE_ENV === 'development' ? err.message : undefined 
+    error: process.env.NODE_ENV === 'development' ? err.message : "Something went wrong"
   });
 });
 
