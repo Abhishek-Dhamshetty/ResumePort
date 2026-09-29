@@ -5,7 +5,7 @@ const dotenv = require("dotenv");
 const path = require("path");
 const passport = require("passport");
 const expressSession = require("express-session");
-const MongoStore = require("connect-mongo");
+const { MongoStore } = require("connect-mongo");
 
 // Load environment variables
 dotenv.config();
