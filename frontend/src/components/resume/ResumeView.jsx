@@ -64,10 +64,8 @@ const ResumeView = () => {
       const extractedScore = scoreMatch ? parseInt(scoreMatch[1], 10) : null;
   
       if (extractedScore === null) {
-        // ✅ Provide fallback message instead of error
-        setError("⚠️ Could not extract ATS score from analysis. Showing general feedback instead.");
+        setError("⚠️ The AI returned feedback without a valid ATS score. Please try again.");
         setFeedback(formatFeedback(atsAnalysis));
-        setAtsScore(75); // Fallback score
       } else {
         setAtsScore(extractedScore);
         setFeedback(formatFeedback(atsAnalysis));

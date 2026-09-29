@@ -2,6 +2,11 @@ const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const User = require('../models/userModel');
 
+const isProduction = process.env.NODE_ENV === 'production';
+const backendUrl = process.env.BACKEND_URL || (
+  isProduction ? 'https://resumeport.onrender.com' : 'http://localhost:9000'
+);
+
 console.log("🔍 Initializing Passport with:", {
   clientID: process.env.GOOGLE_CLIENT_ID ? "Set" : "Missing",
   clientSecret: process.env.GOOGLE_CLIENT_SECRET ? "Set" : "Missing",
@@ -11,9 +16,7 @@ console.log("🔍 Initializing Passport with:", {
 passport.use(new GoogleStrategy({
     clientID: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    callbackURL: process.env.NODE_ENV === 'production' 
-      ? "https://resumeport.onrender.com/api/auth/google/callback"
-      : "http://localhost:9000/api/auth/google/callback"
+    callbackURL: `${backendUrl}/api/auth/google/callback`
   },
   async function(accessToken, refreshToken, profile, cb) {
     try {

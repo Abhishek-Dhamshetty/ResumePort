@@ -1,5 +1,4 @@
 const express = require("express");
-const cors = require("cors");
 const expressAsyncHandler = require("express-async-handler");
 const multer = require("multer");
 const pdfParse = require("pdf-parse");
@@ -9,17 +8,6 @@ const mammoth = require("mammoth");
 const { analyzeResume, generateResume, analyzeATScore, reviewResume } = require("../utils/geminiServices");
 
 const resumeApp = express.Router();
-
-// ✅ CORS Configuration for Production
-const corsOptions = {
-  origin: process.env.NODE_ENV === 'production'
-    ? ["https://resume-port-ten.vercel.app", "https://resumeport.onrender.com"]
-    : ["http://localhost:5173", "http://localhost:3000"],
-  credentials: true,
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
-};
-resumeApp.use(cors(corsOptions));
 
 // ✅ Middleware to Parse JSON
 resumeApp.use(express.json({ limit: "10mb" }));
@@ -88,7 +76,7 @@ resumeApp.post(
       res.status(200).json({ message: "Resume analysis complete", analysis });
     } catch (error) {
       console.error("❌ Error analyzing resume:", error);
-      res.status(400).json({ message: error.message });
+      res.status(error.statusCode || 400).json({ message: error.message });
     }
   })
 );
@@ -108,7 +96,7 @@ resumeApp.post(
       res.status(200).json({ resume: { text: aiGeneratedResume.text } });
     } catch (error) {
       console.error("❌ Error generating resume:", error);
-      res.status(400).json({ message: error.message });
+      res.status(error.statusCode || 400).json({ message: error.message });
     }
   })
 );
@@ -130,7 +118,7 @@ resumeApp.post(
       res.status(200).json({ message: "ATS score analysis complete", atsAnalysis });
     } catch (error) {
       console.error("❌ Error analyzing ATS score:", error);
-      res.status(400).json({ message: error.message });
+      res.status(error.statusCode || 400).json({ message: error.message });
     }
   })
 );
@@ -152,7 +140,7 @@ resumeApp.post(
       res.status(200).json({ message: "Resume review complete", review });
     } catch (error) {
       console.error("❌ Error reviewing resume:", error);
-      res.status(400).json({ message: error.message });
+      res.status(error.statusCode || 400).json({ message: error.message });
     }
   })
 );

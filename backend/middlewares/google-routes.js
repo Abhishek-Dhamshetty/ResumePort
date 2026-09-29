@@ -3,14 +3,17 @@ const router = express.Router();
 const passport = require("passport");
 const jwt = require("jsonwebtoken");
 
+const isProduction = process.env.NODE_ENV === "production";
+const frontendUrl = process.env.FRONTEND_URL || (
+  isProduction ? "https://resume-port-ten.vercel.app" : "http://localhost:5173"
+);
+
 router.get('/auth/google',
   passport.authenticate('google', { scope: ['profile', 'email'] }));
 
 router.get('/auth/google/callback', 
   passport.authenticate('google', { 
-    failureRedirect: process.env.NODE_ENV === 'production' 
-      ? 'https://resume-port-ten.vercel.app/signin?error=auth_failed'
-      : 'http://localhost:5173/signin?error=auth_failed'
+    failureRedirect: `${frontendUrl}/signin?error=auth_failed`
   }),
   function(req, res) {
     try {
@@ -38,18 +41,13 @@ router.get('/auth/google/callback',
         { expiresIn: '7d' }
       );
 
-      // ✅ Production-ready redirect URLs
-      const redirectUrl = process.env.NODE_ENV === 'production' 
-        ? `https://resume-port-ten.vercel.app/?token=${token}` 
-        : `http://localhost:5173/?token=${token}`;
+      const redirectUrl = `${frontendUrl}/?token=${encodeURIComponent(token)}`;
       
       console.log("🔄 Redirecting to:", redirectUrl);
       res.redirect(redirectUrl);
     } catch (error) {
       console.error("❌ OAuth callback error:", error);
-      const errorUrl = process.env.NODE_ENV === 'production'
-        ? "https://resume-port-ten.vercel.app/signin?error=auth_failed"
-        : "http://localhost:5173/signin?error=auth_failed";
+      const errorUrl = `${frontendUrl}/signin?error=auth_failed`;
       res.redirect(errorUrl);
     }
   });

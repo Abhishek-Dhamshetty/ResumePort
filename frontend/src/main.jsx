@@ -12,10 +12,6 @@ import ResumeCreate from './components/resume/ResumeCreate.jsx'
 import ResumeReview from './components/resume/ResumeReview.jsx'
 import ResumeUpload from './components/resume/ResumeUpload.jsx'
 import ResumeView from './components/resume/ResumeView.jsx'
-import PortfolioCreate from './components/portfolio/PortfolioCreate.jsx'
-import PortfolioReview from './components/portfolio/PortfolioReview.jsx'
-import PortfolioUpload from './components/portfolio/PortfolioUpload.jsx'
-import PortfolioView from './components/portfolio/PortfolioView.jsx'
 
 const browserRouterObj = createBrowserRouter([
   {
@@ -58,22 +54,6 @@ const browserRouterObj = createBrowserRouter([
         path: 'resume/resumeview',
         element: <ResumeView />,
       },
-      {
-        path: 'portfolio/portfoliocreate',
-        element: <PortfolioCreate />,
-      },
-      {
-        path: 'portfolio/portfolioreview',
-        element: <PortfolioReview />,
-      },
-      {
-        path: 'portfolio/portfolioupload',
-        element: <PortfolioUpload />,
-      },
-      {
-        path: 'portfolio/portfolioview',
-        element: <PortfolioView />,
-      }
     ],
   },
 ]);

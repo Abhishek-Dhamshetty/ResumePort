@@ -2,20 +2,52 @@ const mongoose = require("mongoose");
 const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
+const path = require("path");
 const passport = require("passport");
 const expressSession = require("express-session");
 
 // Load environment variables
 dotenv.config();
 
+const isProduction = process.env.NODE_ENV === "production";
+const frontendUrl = process.env.FRONTEND_URL || (
+  isProduction ? "https://resume-port-ten.vercel.app" : "http://localhost:5173"
+);
+const backendUrl = process.env.BACKEND_URL || (
+  isProduction ? "https://resumeport.onrender.com" : "http://localhost:9000"
+);
+const allowedOrigins = (process.env.CORS_ORIGINS || [
+  frontendUrl,
+  backendUrl,
+  "http://localhost:3000",
+  "http://localhost:5173",
+].join(",")).split(",").map((origin) => origin.trim()).filter(Boolean);
+
+const requiredEnvironment = [
+  "DBURL",
+  "JWT_SECRET",
+  "SESSION_SECRET",
+  "GOOGLE_CLIENT_ID",
+  "GOOGLE_CLIENT_SECRET",
+  "GEMINI_API_KEY",
+];
+const missingEnvironment = requiredEnvironment.filter((name) => !process.env[name]);
+if (missingEnvironment.length > 0) {
+  throw new Error(`Missing required environment variables: ${missingEnvironment.join(", ")}`);
+}
+
 const app = express();
 const port = process.env.PORT || 9000;
+
+if (isProduction) {
+  app.set("trust proxy", 1);
+}
 
 // ✅ Passport Configuration
 require("./middlewares/passport");
 
 app.use(expressSession({
-  secret: process.env.SESSION_SECRET || "your_secret_key",
+  secret: process.env.SESSION_SECRET,
   resave: false,
   saveUninitialized: true,
   cookie: { 
@@ -30,9 +62,7 @@ app.use(passport.session());
 
 // ✅ CORS Configuration for Production
 const corsOptions = {
-  origin: process.env.NODE_ENV === 'production' 
-    ? ["https://resume-port-ten.vercel.app", "https://resumeport.onrender.com"]
-    : ["http://localhost:3000", "http://localhost:5173"],
+  origin: allowedOrigins,
   credentials: true,
   allowedHeaders: ["Content-Type", "Authorization"],
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
@@ -43,6 +73,7 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
+app.use("/generated_pdfs", express.static(path.join(__dirname, "generated_pdfs")));
 
 // ✅ Health Check Route
 app.get("/", (req, res) => {

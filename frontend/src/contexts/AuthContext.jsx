@@ -27,35 +27,40 @@ export const AuthProvider = ({ children }) => {
       window.history.replaceState({}, document.title, window.location.pathname);
     }
 
-    if (token) {
-      fetchUserProfile();
-    } else {
+    if (!token) {
       setLoading(false);
+      return;
     }
-  }, [token]);
 
-  const fetchUserProfile = async () => {
-    try {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/user-api/profile`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
+    const fetchUserProfile = async () => {
+      try {
+        const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/user-api/profile`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
 
-      if (response.ok) {
-        const data = await response.json();
-        setUser(data.user);
-      } else {
-        logout();
+        if (response.ok) {
+          const data = await response.json();
+          setUser(data.user);
+        } else {
+          localStorage.removeItem('token');
+          setToken(null);
+          setUser(null);
+        }
+      } catch (error) {
+        console.error('Error fetching user profile:', error);
+        localStorage.removeItem('token');
+        setToken(null);
+        setUser(null);
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      console.error('Error fetching user profile:', error);
-      logout();
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
+
+    fetchUserProfile();
+  }, [token]);
 
   const login = (userToken) => {
     localStorage.setItem('token', userToken);
