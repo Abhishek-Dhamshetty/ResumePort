@@ -6,7 +6,6 @@ const UserSchema = new mongoose.Schema(
       type: String,
       required: true,
       unique: true,
-      index: true, // Explicit index for Google ID
     },
     firstName: {
       type: String,
@@ -20,7 +19,6 @@ const UserSchema = new mongoose.Schema(
       type: String,
       required: true,
       unique: true,
-      index: true, // Explicit index for email
     },
     profileImage: {
       type: String,

@@ -63,6 +63,7 @@ const discoverModels = async () => {
             const availableModels = (payload.models || [])
                 .filter((model) => model.supportedGenerationMethods?.includes("generateContent"))
                 .filter((model) => /^models\/gemini-/i.test(model.name || ""))
+                .filter((model) => !/(tts|image|embedding|robotics|computer-use)/i.test(model.name || ""))
                 .sort((left, right) => modelScore(right) - modelScore(left));
 
             if (!availableModels.length) {
@@ -122,7 +123,7 @@ const sendToAI = async (prompt, maxOutputTokens = 900) => {
                 return text.trim();
               } catch (error) {
                 lastError = error;
-                const isRetryable = /404|not found|not_available|429|quota|503|service unavailable|overload/i.test(error.message || "");
+                const isRetryable = /404|not found|not_available|429|quota|503|service unavailable|overload|empty response/i.test(error.message || "");
                 if (!isRetryable) {
                     throw error;
                 }

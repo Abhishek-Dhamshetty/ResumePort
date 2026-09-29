@@ -5,6 +5,7 @@ const dotenv = require("dotenv");
 const path = require("path");
 const passport = require("passport");
 const expressSession = require("express-session");
+const MongoStore = require("connect-mongo");
 
 // Load environment variables
 dotenv.config();
@@ -49,7 +50,12 @@ require("./middlewares/passport");
 app.use(expressSession({
   secret: process.env.SESSION_SECRET,
   resave: false,
-  saveUninitialized: true,
+  saveUninitialized: false,
+  store: MongoStore.create({
+    mongoUrl: process.env.DBURL,
+    collectionName: "sessions",
+    ttl: 24 * 60 * 60,
+  }),
   cookie: { 
     secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
@@ -86,10 +92,7 @@ app.get("/", (req, res) => {
 
 // ✅ Database Connection
 mongoose
-  .connect(process.env.DBURL, { 
-    useNewUrlParser: true, 
-    useUnifiedTopology: true 
-  })
+  .connect(process.env.DBURL)
   .then(() => {
     console.log("✅ DB Connection Successful");
     app.listen(port, () => {
