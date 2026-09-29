@@ -5,9 +5,12 @@ const path = require("path");
 require("dotenv").config();
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash";
 const MAX_INPUT_CHARS = 12000;
+const MODEL_CACHE_TTL_MS = 5 * 60 * 1000;
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+let cachedModel = null;
+let cachedModelAt = 0;
+let modelDiscoveryPromise = null;
 
 // Directory to save generated PDFs
 const OUTPUT_DIR = path.join(__dirname, "../generated_pdfs");
@@ -32,6 +35,51 @@ const formatList = (items, formatter) => {
     return validItems.length ? validItems.map((item) => formatter(item)).join("\n") : "Not provided";
 };
 
+const modelScore = (model) => {
+    const name = String(model.name || "").toLowerCase();
+    const version = name.match(/gemini-(\d+)(?:\.(\d+))?/);
+    const versionScore = version ? Number(version[1]) * 100 + Number(version[2] || 0) : 0;
+    const flashScore = name.includes("flash") ? 3 : 0;
+    const previewPenalty = /preview|experimental|deprecated/.test(name) ? -10 : 0;
+    return versionScore + flashScore + previewPenalty;
+};
+
+const discoverModel = async () => {
+    if (cachedModel && Date.now() - cachedModelAt < MODEL_CACHE_TTL_MS) {
+        return cachedModel;
+    }
+
+    if (!modelDiscoveryPromise) {
+        modelDiscoveryPromise = (async () => {
+            const response = await fetch(
+                `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(GEMINI_API_KEY)}`
+            );
+            if (!response.ok) {
+                throw new Error(`Gemini model discovery failed with HTTP ${response.status}.`);
+            }
+
+            const payload = await response.json();
+            const availableModels = (payload.models || [])
+                .filter((model) => model.supportedGenerationMethods?.includes("generateContent"))
+                .filter((model) => /^models\/gemini-/i.test(model.name || ""))
+                .sort((left, right) => modelScore(right) - modelScore(left));
+
+            if (!availableModels.length) {
+                throw new Error("Gemini returned no model that supports generateContent.");
+            }
+
+            cachedModel = availableModels[0].name.replace(/^models\//i, "");
+            cachedModelAt = Date.now();
+            console.log("✅ Selected available Gemini model:", cachedModel);
+            return cachedModel;
+        })().finally(() => {
+            modelDiscoveryPromise = null;
+        });
+    }
+
+    return modelDiscoveryPromise;
+};
+
 /**
  * Send a request to Gemini without converting failures into fake AI content.
  * @param {string} prompt - The prompt to send to Gemini.
@@ -46,25 +94,38 @@ const sendToAI = async (prompt, maxOutputTokens = 900) => {
     }
 
     try {
-        const model = genAI.getGenerativeModel({ model: GEMINI_MODEL });
-        const result = await model.generateContent({ 
-            contents: [{ 
-                role: "user", 
-                parts: [{ text: compactText(prompt) }]
-            }],
-            generationConfig: {
-                temperature: 0.2,
-                maxOutputTokens,
-            },
-        });
+        for (let attempt = 0; attempt < 2; attempt += 1) {
+            const modelName = await discoverModel();
+            try {
+                const model = genAI.getGenerativeModel({ model: modelName });
+                const result = await model.generateContent({
+                    contents: [{
+                        role: "user",
+                        parts: [{ text: compactText(prompt) }]
+                    }],
+                    generationConfig: {
+                        temperature: 0.2,
+                        maxOutputTokens,
+                    },
+                });
 
-        const text = result.response?.text?.();
-        if (!text?.trim()) {
-            const error = new Error("Gemini returned an empty response.");
-            error.statusCode = 502;
-            throw error;
+                const text = result.response?.text?.();
+                if (!text?.trim()) {
+                    const error = new Error("Gemini returned an empty response.");
+                    error.statusCode = 502;
+                    throw error;
+                }
+                return text.trim();
+            } catch (error) {
+                const isModelUnavailable = /404|not found|not_available/i.test(error.message || "");
+                if (isModelUnavailable && attempt === 0) {
+                    cachedModel = null;
+                    cachedModelAt = 0;
+                    continue;
+                }
+                throw error;
+            }
         }
-        return text.trim();
     } catch (error) {
         console.error("❌ Error communicating with AI:", error?.message || error);
 
