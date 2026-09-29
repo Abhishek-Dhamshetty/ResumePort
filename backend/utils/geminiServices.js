@@ -9,6 +9,7 @@ const MAX_INPUT_CHARS = 12000;
 const MODEL_CACHE_TTL_MS = 5 * 60 * 1000;
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
 let cachedModel = null;
+let cachedModels = [];
 let cachedModelAt = 0;
 let modelDiscoveryPromise = null;
 
@@ -44,9 +45,9 @@ const modelScore = (model) => {
     return versionScore + flashScore + previewPenalty;
 };
 
-const discoverModel = async () => {
-    if (cachedModel && Date.now() - cachedModelAt < MODEL_CACHE_TTL_MS) {
-        return cachedModel;
+const discoverModels = async () => {
+    if (cachedModels.length && Date.now() - cachedModelAt < MODEL_CACHE_TTL_MS) {
+        return cachedModels;
     }
 
     if (!modelDiscoveryPromise) {
@@ -68,10 +69,11 @@ const discoverModel = async () => {
                 throw new Error("Gemini returned no model that supports generateContent.");
             }
 
-            cachedModel = availableModels[0].name.replace(/^models\//i, "");
+            cachedModels = availableModels.map((model) => model.name.replace(/^models\//i, ""));
+            cachedModel = cachedModels[0];
             cachedModelAt = Date.now();
-            console.log("✅ Selected available Gemini model:", cachedModel);
-            return cachedModel;
+            console.log("✅ Available Gemini models:", cachedModels.slice(0, 3).join(", "));
+            return cachedModels;
         })().finally(() => {
             modelDiscoveryPromise = null;
         });
@@ -95,8 +97,10 @@ const sendToAI = async (prompt, maxOutputTokens = 900) => {
 
     try {
         for (let attempt = 0; attempt < 2; attempt += 1) {
-            const modelName = await discoverModel();
-            try {
+                        const modelNames = await discoverModels();
+                        let lastError;
+                        for (const modelName of modelNames.slice(0, 3)) {
+                            try {
                 const model = genAI.getGenerativeModel({ model: modelName });
                 const result = await model.generateContent({
                     contents: [{
@@ -116,21 +120,34 @@ const sendToAI = async (prompt, maxOutputTokens = 900) => {
                     throw error;
                 }
                 return text.trim();
-            } catch (error) {
-                const isModelUnavailable = /404|not found|not_available/i.test(error.message || "");
-                if (isModelUnavailable && attempt === 0) {
-                    cachedModel = null;
-                    cachedModelAt = 0;
-                    continue;
+              } catch (error) {
+                lastError = error;
+                const isRetryable = /404|not found|not_available|429|quota|503|service unavailable|overload/i.test(error.message || "");
+                if (!isRetryable) {
+                    throw error;
                 }
-                throw error;
+              }
             }
+
+            if (lastError && attempt === 0) {
+                cachedModel = null;
+                cachedModels = [];
+                cachedModelAt = 0;
+                continue;
+            }
+            throw lastError || new Error("No Gemini model could process the request.");
         }
     } catch (error) {
         console.error("❌ Error communicating with AI:", error?.message || error);
 
         if (!error.statusCode) {
-            error.statusCode = /429|quota/i.test(error.message || "") ? 429 : 502;
+            if (/429|quota/i.test(error.message || "")) {
+                error.statusCode = 429;
+            } else if (/503|service unavailable|overload/i.test(error.message || "")) {
+                error.statusCode = 503;
+            } else {
+                error.statusCode = 502;
+            }
         }
         throw error;
     }
